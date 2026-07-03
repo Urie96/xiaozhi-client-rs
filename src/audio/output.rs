@@ -117,7 +117,12 @@ impl OutputPipeline {
                 &cfg.config(),
                 sample_format,
                 move |data: &mut Data, _info: &OutputCallbackInfo| {
-                    let frames = data.len() / (ch as usize * sf.sample_size());
+                    // NOTE: cpal's `Data::len()` returns the number of *samples*
+                    // (across all channels), not bytes. One frame == `ch` samples,
+                    // so the frame count is `len / ch`. Dividing by `sample_size`
+                    // here (as bytes) would under-fill the buffer and leave the
+                    // rest as uninitialized garbage -> pure noise on output.
+                    let frames = data.len() / ch as usize;
                     let mut mono = vec![0i16; frames];
                     {
                         let mut g = ring_for_cb.lock().unwrap();
